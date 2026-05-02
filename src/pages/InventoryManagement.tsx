@@ -61,6 +61,9 @@ export default function InventoryManagement() {
     queryFn: () => apiService.getProducts(),
   });
 
+  // Ensure inventory is always an array
+  const inventoryList = Array.isArray(inventory) ? inventory : [];
+
   // Create inventory mutation
   const createMutation = useMutation({
     mutationFn: async (data: CreateInventoryRequest) => {
@@ -209,7 +212,7 @@ export default function InventoryManagement() {
     return { label: 'In Stock', color: 'bg-green-100 text-green-700' };
   };
 
-  const filteredInventory = inventory.filter((item) => {
+  const filteredInventory = inventoryList.filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -218,10 +221,10 @@ export default function InventoryManagement() {
   });
 
   // Calculate stats
-  const totalItems = inventory.length;
-  const lowStockItems = inventory.filter((item) => item.quantity <= (item.min_stock || 10)).length;
-  const outOfStockItems = inventory.filter((item) => item.quantity === 0).length;
-  const totalValue = inventory.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalItems = inventoryList.length;
+  const lowStockItems = inventoryList.filter((item) => item.quantity <= (item.min_stock || 10)).length;
+  const outOfStockItems = inventoryList.filter((item) => item.quantity === 0).length;
+  const totalValue = inventoryList.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

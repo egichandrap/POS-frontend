@@ -36,6 +36,9 @@ export default function UserManagement() {
     }),
   });
 
+  // Ensure users is always an array
+  const usersList = Array.isArray(users) ? users : [];
+
   // Create user mutation (using register as fallback, but should use admin create)
   const createMutation = useMutation({
     mutationFn: async (data: { username: string; email: string; password: string; full_name: string; role: string }) => {
@@ -178,7 +181,7 @@ export default function UserManagement() {
     }
   };
 
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = usersList.filter((user) => {
     const matchesSearch = 
       user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||

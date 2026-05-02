@@ -159,7 +159,7 @@ class ApiService {
     }
   }
 
-async getMe(): Promise<User> {
+  async getMe(): Promise<User> {
     return this.request<User>('/auth/me');
   }
 

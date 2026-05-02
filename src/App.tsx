@@ -18,7 +18,16 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: 1,
+      retry: (failureCount, error) => {
+        // Don't retry on 401/403 errors
+        if (error && typeof error === 'object' && 'status' in error) {
+          const status = (error as { status: number }).status;
+          if (status === 401 || status === 403) {
+            return false;
+          }
+        }
+        return failureCount < 1;
+      },
     },
   },
 });
@@ -28,7 +37,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <div className="min-h-screen bg-gray-50">
+          <div className="min-h-screen bg-slate-50">
             <Routes>
               {/* Public Routes - Customer */}
               <Route path="/order/:tableId" element={<CustomerOrder />} />
@@ -38,30 +47,18 @@ function App() {
               {/* Public Routes - Staff Login */}
               <Route path="/login" element={<Login />} />
 
-              {/* Protected Routes - Staff Dashboard */}
-              <Route element={<ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN', 'CASHIER', 'VIEWER']}><DashboardLayout /></ProtectedRoute>}>
+              {/* Protected Routes - Staff Dashboard with Layout */}
+              <Route element={
+                <ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN', 'CASHIER', 'VIEWER']}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/kitchen" element={<KitchenDashboard />} />
-                <Route path="/admin/inventory" element={
-                  <ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN']}>
-                    <InventoryManagement />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/sales" element={
-                  <ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN', 'CASHIER']}>
-                    <SalesDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/tables" element={
-                  <ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN']}>
-                    <TableManagement />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/users" element={
-                  <ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN']}>
-                    <UserManagement />
-                  </ProtectedRoute>
-                } />
+                <Route path="/admin/inventory" element={<InventoryManagement />} />
+                <Route path="/admin/sales" element={<SalesDashboard />} />
+                <Route path="/admin/tables" element={<TableManagement />} />
+                <Route path="/admin/users" element={<UserManagement />} />
               </Route>
 
               {/* Default redirect */}
