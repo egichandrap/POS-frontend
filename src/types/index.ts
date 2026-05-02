@@ -77,11 +77,12 @@ export interface AddOrderItemRequest {
 
 export interface GuestCheckoutRequest {
   payment_method: 'CASH' | 'CARD' | 'QRIS' | 'E_WALLET' | 'TRANSFER';
-  payment_amount: number;
+  payment_amount?: number;
+  customer_name?: string;
   notes?: string;
 }
 
-// Inventory/Product Type (simplified)
+// Inventory/Product Type
 export interface Product {
   id: string;
   sku: string;
@@ -89,7 +90,33 @@ export interface Product {
   description?: string;
   quantity: number;
   unit: string;
+  location?: string;
+  min_stock?: number;
+  max_stock?: number;
   price: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateProductRequest {
+  sku: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  unit: string;
+  location?: string;
+  min_stock?: number;
+  max_stock?: number;
+  price: number;
+}
+
+export interface UpdateProductRequest {
+  name?: string;
+  description?: string;
+  price?: number;
+  location?: string;
+  min_stock?: number;
+  max_stock?: number;
 }
 
 // Auth Types
@@ -100,6 +127,8 @@ export interface User {
   full_name: string;
   role: 'SUPER_ADMIN' | 'ADMIN' | 'CASHIER' | 'VIEWER';
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface LoginRequest {
@@ -120,5 +149,31 @@ export interface SalesSummary {
   total_sales: number;
   total_orders: number;
   total_items: number;
-  date: string;
+  date?: string;
+}
+
+// Transaction/Order for Sales
+export interface Transaction {
+  id: string;
+  order_number: string;
+  table_id: string;
+  table_number: number;
+  customer_name: string;
+  customer_phone?: string;
+  items: GuestOrderItem[];
+  subtotal: number;
+  tax_amount: number;
+  tax_percent: number;
+  discount_amount: number;
+  discount_percent: number;
+  total_amount: number;
+  payment_method: 'CASH' | 'CARD' | 'QRIS' | 'E_WALLET' | 'TRANSFER';
+  payment_status: 'PENDING' | 'PAID' | 'REFUNDED';
+  payment_amount: number;
+  change_amount: number;
+  status: 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'SERVED' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED';
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
 }

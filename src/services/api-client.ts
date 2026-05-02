@@ -8,6 +8,8 @@ import type {
   AddOrderItemRequest,
   GuestCheckoutRequest,
   Product,
+  CreateProductRequest,
+  UpdateProductRequest,
   LoginRequest,
   LoginResponse,
   User,
@@ -157,8 +159,28 @@ class ApiService {
     }
   }
 
-  async getMe(): Promise<User> {
+async getMe(): Promise<User> {
     return this.request<User>('/auth/me');
+  }
+
+  // ============ ADMIN USERS ============
+
+  async getUsers(params?: {
+    role?: string;
+    status?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<User[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.role) queryParams.set('role', params.role);
+    if (params?.status) queryParams.set('status', params.status);
+    if (params?.search) queryParams.set('search', params.search);
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+    if (params?.offset) queryParams.set('offset', params.offset.toString());
+
+    const queryString = queryParams.toString();
+    return this.request<User[]>(`/admin/users${queryString ? `?${queryString}` : ''}`);
   }
 
   // ============ TABLES (Admin) ============
@@ -320,14 +342,60 @@ class ApiService {
     return this.request<GuestOrder[]>(`/orders/table/${tableId}`);
   }
 
-  // ============ INVENTORY (Public) ============
+  // ============ INVENTORY ============
 
-  async getProducts(): Promise<Product[]> {
-    return this.request<Product[]>('/inventory');
+  async getProducts(params?: {
+    sku?: string;
+    name?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Product[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.sku) queryParams.set('sku', params.sku);
+    if (params?.name) queryParams.set('name', params.name);
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+    if (params?.offset) queryParams.set('offset', params.offset.toString());
+
+    const queryString = queryParams.toString();
+    return this.request<Product[]>(`/inventory${queryString ? `?${queryString}` : ''}`);
   }
 
   async getProduct(id: string): Promise<Product> {
     return this.request<Product>(`/inventory/${id}`);
+  }
+
+  async createProduct(request: CreateProductRequest): Promise<Product> {
+    return this.request<Product>('/inventory', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async updateProduct(id: string, request: UpdateProductRequest): Promise<Product> {
+    return this.request<Product>(`/inventory/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    return this.request<void>(`/inventory/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateStock(id: string, quantity: number): Promise<Product> {
+    return this.request<Product>(`/inventory/${id}/stock`, {
+      method: 'PUT',
+      body: JSON.stringify({ quantity }),
+    });
+  }
+
+  async adjustStock(id: string, amount: number): Promise<Product> {
+    return this.request<Product>(`/inventory/${id}/stock/adjust`, {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    });
   }
 
   // ============ REPORTS (Admin) ============
