@@ -28,12 +28,22 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState('');
 
   // Fetch users
-  const { data: users = [], isLoading, refetch } = useQuery({
+  const { data: users = [], isLoading, refetch, error } = useQuery({
     queryKey: ['admin-users', roleFilter, statusFilter],
-    queryFn: () => apiService.getUsers({
-      role: roleFilter || undefined,
-      status: statusFilter || undefined,
-    }),
+    queryFn: async () => {
+      console.log('[UserManagement] Fetching users with filters:', { roleFilter, statusFilter });
+      try {
+        const result = await apiService.getUsers({
+          role: roleFilter || undefined,
+          status: statusFilter || undefined,
+        });
+        console.log('[UserManagement] Users fetched:', result);
+        return result;
+      } catch (err) {
+        console.error('[UserManagement] Error fetching users:', err);
+        throw err;
+      }
+    },
   });
 
   // Ensure users is always an array
@@ -219,21 +229,31 @@ export default function UserManagement() {
         {/* Filters */}
         <div className="card mb-6">
           <div className="flex flex-col md:flex-row gap-4">
+            {/* Search Box */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search users..."
+                placeholder="Search by username, email, or name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input pl-10"
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
+            {/* Filters */}
             <div className="flex gap-2">
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="input"
+                className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer"
               >
                 <option value="">All Roles</option>
                 {ROLE_OPTIONS.map((role) => (
@@ -243,7 +263,7 @@ export default function UserManagement() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="input"
+                className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer"
               >
                 <option value="">All Status</option>
                 {STATUS_OPTIONS.map((status) => (
@@ -262,6 +282,17 @@ export default function UserManagement() {
                 <div key={i} className="h-16 bg-gray-200 rounded" />
               ))}
             </div>
+          </div>
+        ) : error ? (
+          <div className="card p-6 text-center">
+            <p className="text-red-500 mb-2">Error loading users</p>
+            <p className="text-sm text-gray-500 mb-4">
+              {(error as any)?.message || 'Unknown error'}
+            </p>
+            <button onClick={() => refetch()} className="btn btn-outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry
+            </button>
           </div>
         ) : (
           <div className="card overflow-hidden">

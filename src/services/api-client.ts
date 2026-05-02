@@ -180,7 +180,14 @@ class ApiService {
     if (params?.offset) queryParams.set('offset', params.offset.toString());
 
     const queryString = queryParams.toString();
-    return this.request<User[]>(`/admin/users${queryString ? `?${queryString}` : ''}`);
+    const response = await this.request<{ users: User[]; total: number; limit: number; offset: number; total_pages: number } | User[]>(
+      `/admin/users${queryString ? `?${queryString}` : ''}`
+    );
+    // Handle both paginated response and direct array response
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return response.users;
   }
 
   // ============ TABLES (Admin) ============
@@ -200,7 +207,10 @@ class ApiService {
     if (params?.offset) queryParams.set('offset', params.offset.toString());
 
     const queryString = queryParams.toString();
-    return this.request<Table[]>(`/tables${queryString ? `?${queryString}` : ''}`);
+    const response = await this.request<{ tables: Table[]; total: number; limit: number; offset: number; total_pages: number }>(
+      `/tables${queryString ? `?${queryString}` : ''}`
+    );
+    return response.tables;
   }
 
   async getAvailableTables(location?: string): Promise<Table[]> {
@@ -357,7 +367,14 @@ class ApiService {
     if (params?.offset) queryParams.set('offset', params.offset.toString());
 
     const queryString = queryParams.toString();
-    return this.request<Product[]>(`/inventory${queryString ? `?${queryString}` : ''}`);
+    const response = await this.request<{ items: Product[]; total: number; limit: number; offset: number; total_pages: number } | Product[]>(
+      `/inventory${queryString ? `?${queryString}` : ''}`
+    );
+    // Handle both paginated response and direct array response
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return response.items;
   }
 
   async getProduct(id: string): Promise<Product> {

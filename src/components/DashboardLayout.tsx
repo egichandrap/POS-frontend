@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   Bell,
   Search,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
@@ -29,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Orders', path: '/kitchen', icon: ShoppingCart, roles: ['SUPER_ADMIN', 'ADMIN', 'CASHIER'] },
   { name: 'Products', path: '/admin/inventory', icon: Package, roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { name: 'Tables', path: '/admin/tables', icon: UtensilsCrossed, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { name: 'Customers', path: '/admin/users', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { name: 'Reports', path: '/admin/sales', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'CASHIER'] },
 ];

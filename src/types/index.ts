@@ -6,7 +6,7 @@ export interface Table {
   capacity: number;
   status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'MAINTENANCE';
   qr_code?: string;
-  qr_generated: boolean;
+  qr_generated?: boolean;
   description?: string;
   created_at: string;
   updated_at: string;
@@ -94,6 +94,7 @@ export interface Product {
   min_stock?: number;
   max_stock?: number;
   price: number;
+  stock_status?: 'LOW' | 'NORMAL' | 'OUT' | 'OVERSTOCK';
   created_at?: string;
   updated_at?: string;
 }
