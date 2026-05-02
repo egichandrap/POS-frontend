@@ -15,6 +15,10 @@ import {
   Check,
   Users,
   MapPin,
+  UtensilsCrossed,
+  Home,
+  Armchair,
+  Coffee,
 } from 'lucide-react';
 
 export default function TableManagement() {
@@ -31,16 +35,13 @@ export default function TableManagement() {
   const { data: tables = [], isLoading, refetch, error } = useQuery({
     queryKey: ['tables', statusFilter, locationFilter],
     queryFn: async () => {
-      console.log('[TableManagement] Fetching tables with filters:', { statusFilter, locationFilter });
       try {
         const result = await apiService.getTables({
           status: statusFilter || undefined,
           location: locationFilter || undefined,
         });
-        console.log('[TableManagement] Tables fetched:', result);
         return result;
       } catch (err) {
-        console.error('[TableManagement] Error fetching tables:', err);
         throw err;
       }
     },
@@ -58,7 +59,7 @@ export default function TableManagement() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['tables'] });
       refetch();
-      toast.success('Table created successfully!');
+      toast.success('Table added successfully!');
       closeModal();
     },
     onError: (error: any) => {
@@ -68,10 +69,11 @@ export default function TableManagement() {
 
   // Update table mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateTableRequest }) => 
+    mutationFn: ({ id, data }: { id: string; data: UpdateTableRequest }) =>
       apiService.updateTable(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['tables'] });
+      refetch();
       toast.success('Table updated successfully!');
       closeModal();
     },
@@ -83,8 +85,9 @@ export default function TableManagement() {
   // Delete table mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiService.deleteTable(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['tables'] });
+      refetch();
       toast.success('Table deleted successfully!');
     },
     onError: (error: any) => {
@@ -96,8 +99,9 @@ export default function TableManagement() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: Table['status'] }) =>
       apiService.updateTableStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tables'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['tables'] });
+      refetch();
       toast.success('Status updated!');
     },
     onError: (error: any) => {
@@ -144,7 +148,7 @@ export default function TableManagement() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
+
     const tableData: CreateTableRequest | UpdateTableRequest = {
       number: parseInt(formData.get('number') as string),
       location: formData.get('location') as CreateTableRequest['location'],
@@ -159,18 +163,28 @@ export default function TableManagement() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusInfo = (status: string) => {
     switch (status) {
       case 'AVAILABLE':
-        return 'badge-success';
+        return { label: 'Available', color: 'bg-emerald-500', icon: Check };
       case 'OCCUPIED':
-        return 'badge-warning';
+        return { label: 'Occupied', color: 'bg-amber-500', icon: Users };
       case 'RESERVED':
-        return 'badge-info';
+        return { label: 'Reserved', color: 'bg-blue-500', icon: Coffee };
       case 'MAINTENANCE':
-        return 'badge-danger';
+        return { label: 'Maintenance', color: 'bg-red-500', icon: X };
       default:
-        return 'badge-neutral';
+        return { label: status, color: 'bg-gray-500', icon: Check };
+    }
+  };
+
+  const getLocationIcon = (location: string) => {
+    switch (location) {
+      case 'INDOOR': return Home;
+      case 'OUTDOOR': return UtensilsCrossed;
+      case 'VIP': return Armchair;
+      case 'PATIO': return Coffee;
+      default: return MapPin;
     }
   };
 
@@ -180,35 +194,83 @@ export default function TableManagement() {
     return matchesSearch;
   });
 
+  // Calculate stats
+  const totalTables = tablesList.length;
+  const availableTables = tablesList.filter((t) => t.status === 'AVAILABLE').length;
+  const occupiedTables = tablesList.filter((t) => t.status === 'OCCUPIED').length;
+  const reservedTables = tablesList.filter((t) => t.status === 'RESERVED').length;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-6xl xl:max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Table Management</h1>
-            <p className="text-gray-600 mt-1">Manage restaurant tables and QR codes</p>
+            <h1 className="text-3xl font-bold text-gray-900">Tables</h1>
+            <p className="text-gray-500 mt-1">Manage restaurant tables and QR codes</p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => refetch()}
-              className="btn btn-outline"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
+          <div className="flex gap-3">
+            <button onClick={() => refetch()} className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 font-medium">
+              <RefreshCw className="w-4 h-4" />
               Refresh
             </button>
-            <button
-              onClick={() => openModal()}
-              className="btn btn-primary"
-            >
-              <Plus className="w-4 h-4 mr-2" />
+            <button onClick={() => openModal()} className="px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center gap-2 font-medium">
+              <Plus className="w-4 h-4" />
               Add Table
             </button>
           </div>
         </div>
 
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+                <UtensilsCrossed className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 font-medium">Total Tables</p>
+                <p className="text-2xl font-bold text-gray-900">{totalTables}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <Check className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 font-medium">Available</p>
+                <p className="text-2xl font-bold text-emerald-600">{availableTables}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 font-medium">Occupied</p>
+                <p className="text-2xl font-bold text-amber-600">{occupiedTables}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Coffee className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 font-medium">Reserved</p>
+                <p className="text-2xl font-bold text-blue-600">{reservedTables}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Filters */}
-        <div className="card mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search Box */}
             <div className="flex-1 relative">
@@ -218,23 +280,23 @@ export default function TableManagement() {
                 placeholder="Search by table number or description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full pl-12 pr-12 py-3 bg-gray-50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
             </div>
-            {/* Filters */}
+            {/* Filter Dropdowns */}
             <div className="flex gap-2">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer"
+                className="px-4 py-3 bg-gray-50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
               >
                 <option value="">All Status</option>
                 <option value="AVAILABLE">Available</option>
@@ -245,7 +307,7 @@ export default function TableManagement() {
               <select
                 value={locationFilter}
                 onChange={(e) => setLocationFilter(e.target.value)}
-                className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer"
+                className="px-4 py-3 bg-gray-50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
               >
                 <option value="">All Locations</option>
                 <option value="INDOOR">Indoor</option>
@@ -259,190 +321,218 @@ export default function TableManagement() {
 
         {/* Tables Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="card p-4 animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-4" />
-                <div className="h-3 bg-gray-200 rounded w-3/4" />
+              <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-gray-200 rounded w-1/3" />
+                  <div className="h-6 bg-gray-200 rounded w-2/3" />
+                  <div className="h-20 bg-gray-200 rounded" />
+                </div>
               </div>
             ))}
           </div>
         ) : error ? (
-          <div className="card p-6 text-center">
-            <p className="text-red-500 mb-2">Error loading tables</p>
-            <p className="text-sm text-gray-500 mb-4">
-              {(error as any)?.message || 'Unknown error'}
-            </p>
-            <button onClick={() => refetch()} className="btn btn-outline">
+          <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+            <p className="text-red-500 font-medium mb-2">Error loading tables</p>
+            <p className="text-sm text-gray-500 mb-4">{(error as any)?.message || 'Unknown error'}</p>
+            <button onClick={() => refetch()} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors">
               <RefreshCw className="w-4 h-4 mr-2" />
               Retry
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredTables.map((table) => (
-              <div key={table.id} className="card p-4 hover:shadow-lg transition-shadow">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center relative">
-                      <span className="text-xl font-bold text-primary-600">{table.number}</span>
-                      {table.qr_generated && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                          <QrCode className="w-2.5 h-2.5 text-white" />
-                        </div>
-                      )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+            {filteredTables.map((table) => {
+              const statusInfo = getStatusInfo(table.status);
+              const StatusIcon = statusInfo.icon;
+              const LocationIcon = getLocationIcon(table.location);
+
+              return (
+                <div key={table.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-14 h-14 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl flex items-center justify-center relative">
+                        <span className="text-2xl font-bold text-indigo-600">{table.number}</span>
+                        {table.qr_generated && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                            <QrCode className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-lg">Table {table.number}</h3>
+                        <p className="text-sm text-gray-500 flex items-center gap-1">
+                          <LocationIcon className="w-3.5 h-3.5" />
+                          {table.location}
+                        </p>
+                      </div>
                     </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${statusInfo.color} flex items-center gap-1`}>
+                      <StatusIcon className="w-3 h-3" />
+                      {statusInfo.label}
+                    </span>
+                  </div>
+
+                  {/* Details */}
+                  <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-xl">
                     <div>
-                      <h3 className="font-semibold text-lg">Table {table.number}</h3>
-                      <p className="text-sm text-gray-500 flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {table.location}
+                      <p className="text-xs text-gray-500 mb-1">Capacity</p>
+                      <p className="font-semibold text-gray-900 flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5 text-gray-400" />
+                        {table.capacity} seats
                       </p>
                     </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Location</p>
+                      <p className="font-medium text-gray-700 text-sm">{table.location}</p>
+                    </div>
                   </div>
-                  <span className={`badge ${getStatusColor(table.status)}`}>
-                    {table.status}
-                  </span>
-                </div>
 
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                  <Users className="w-4 h-4" />
-                  <span>Capacity: {table.capacity} persons</span>
-                </div>
+                  {/* Description */}
+                  {table.description && (
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{table.description}</p>
+                  )}
 
-                {table.description && (
-                  <p className="text-sm text-gray-500 mb-4">{table.description}</p>
-                )}
+                  {/* Status Actions */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {table.status !== 'AVAILABLE' && (
+                      <button
+                        onClick={() => statusMutation.mutate({ id: table.id, status: 'AVAILABLE' })}
+                        className="px-3 py-1.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
+                        disabled={statusMutation.isPending}
+                      >
+                        Available
+                      </button>
+                    )}
+                    {table.status !== 'OCCUPIED' && (
+                      <button
+                        onClick={() => statusMutation.mutate({ id: table.id, status: 'OCCUPIED' })}
+                        className="px-3 py-1.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
+                        disabled={statusMutation.isPending}
+                      >
+                        Occupied
+                      </button>
+                    )}
+                    {table.status !== 'RESERVED' && (
+                      <button
+                        onClick={() => statusMutation.mutate({ id: table.id, status: 'RESERVED' })}
+                        className="px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                        disabled={statusMutation.isPending}
+                      >
+                        Reserved
+                      </button>
+                    )}
+                  </div>
 
-                {/* Status Actions */}
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {table.status !== 'AVAILABLE' && (
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2 border-t border-gray-100">
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => handleQRClick(table)}
+                        className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+                          table.qr_generated
+                            ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:shadow-md'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                        disabled={qrMutation.isPending}
+                      >
+                        <QrCode className="w-4 h-4" />
+                        {table.qr_generated ? 'View QR' : 'Generate'}
+                      </button>
+                    )}
                     <button
-                      onClick={() => statusMutation.mutate({ id: table.id, status: 'AVAILABLE' })}
-                      className="btn btn-xs btn-success"
-                      disabled={statusMutation.isPending}
+                      onClick={() => openModal(table)}
+                      className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center justify-center gap-1.5"
                     >
-                      Available
+                      <Edit className="w-4 h-4" />
+                      Edit
                     </button>
-                  )}
-                  {table.status !== 'OCCUPIED' && (
                     <button
-                      onClick={() => statusMutation.mutate({ id: table.id, status: 'OCCUPIED' })}
-                      className="btn btn-xs btn-warning"
-                      disabled={statusMutation.isPending}
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to delete Table ${table.number}?`)) {
+                          deleteMutation.mutate(table.id);
+                        }
+                      }}
+                      className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                      disabled={deleteMutation.isPending}
                     >
-                      Occupied
+                      <Trash2 className="w-4 h-4" />
                     </button>
-                  )}
-                  {table.status !== 'RESERVED' && (
-                    <button
-                      onClick={() => statusMutation.mutate({ id: table.id, status: 'RESERVED' })}
-                      className="btn btn-xs btn-info"
-                      disabled={statusMutation.isPending}
-                    >
-                      Reserved
-                    </button>
-                  )}
+                  </div>
                 </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-3 border-t">
-                  {isSuperAdmin && (
-                    <button
-                      onClick={() => handleQRClick(table)}
-                      className={`btn btn-xs flex-1 ${table.qr_generated ? 'btn-primary' : 'btn-outline'}`}
-                      disabled={qrMutation.isPending}
-                    >
-                      <QrCode className="w-3 h-3 mr-1" />
-                      {table.qr_generated ? 'View QR' : 'Generate QR'}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => openModal(table)}
-                    className="btn btn-xs btn-outline flex-1"
-                  >
-                    <Edit className="w-3 h-3 mr-1" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm('Are you sure you want to delete this table?')) {
-                        deleteMutation.mutate(table.id);
-                      }
-                    }}
-                    className="btn btn-xs btn-danger"
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {filteredTables.length === 0 && !isLoading && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No tables found</p>
-            <button
-              onClick={() => openModal()}
-              className="btn btn-primary mt-4"
-            >
-              <Plus className="w-4 h-4 mr-2" />
+          <div className="text-center py-16">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <UtensilsCrossed className="w-10 h-10 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">No tables found</h3>
+            <p className="text-gray-500 mb-6">Get started by adding your first table</p>
+            <button onClick={() => openModal()} className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition-all inline-flex items-center gap-2 font-medium">
+              <Plus className="w-5 h-5" />
               Add First Table
             </button>
           </div>
         )}
       </div>
 
-      {/* Modal */}
+      {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-white px-6 py-5 border-b border-gray-100 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-xl font-bold text-gray-900">
                 {editingTable ? 'Edit Table' : 'Add New Table'}
               </h2>
-              <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5" />
+              <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              {/* Table Number & Capacity */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Table Number *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Table Number *</label>
                   <input
                     type="number"
                     name="number"
                     defaultValue={editingTable?.number}
                     required
                     min="1"
-                    className="input"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                     placeholder="1"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Capacity *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Capacity *</label>
                   <input
                     type="number"
                     name="capacity"
                     defaultValue={editingTable?.capacity}
                     required
                     min="1"
-                    className="input"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                     placeholder="4"
                   />
                 </div>
               </div>
 
+              {/* Location */}
               <div>
-                <label className="block text-sm font-medium mb-1">Location *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location *</label>
                 <select
                   name="location"
                   defaultValue={editingTable?.location || 'INDOOR'}
                   required
-                  className="input"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer"
                 >
                   <option value="INDOOR">Indoor</option>
                   <option value="OUTDOOR">Outdoor</option>
@@ -451,36 +541,36 @@ export default function TableManagement() {
                 </select>
               </div>
 
+              {/* Description */}
               <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                 <textarea
                   name="description"
                   defaultValue={editingTable?.description}
-                  className="input"
-                  rows={2}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+                  rows={3}
                   placeholder="Table description..."
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="btn btn-outline flex-1"
-                >
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t border-gray-100">
+                <button type="button" onClick={closeModal} className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium">
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary flex-1"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition-all font-medium"
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
                   {createMutation.isPending || updateMutation.isPending ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin mx-auto" />
                   ) : (
-                    <Check className="w-4 h-4 mr-2" />
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      {editingTable ? 'Update' : 'Create'}
+                    </>
                   )}
-                  {editingTable ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>
@@ -492,12 +582,12 @@ export default function TableManagement() {
       {showQR && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            {/* Header - Fixed position */}
-            <div className="sticky top-0 bg-white rounded-t-2xl px-6 py-4 border-b flex items-center justify-between">
-              <h2 className="text-xl font-bold">Table QR Code</h2>
+            {/* Header */}
+            <div className="sticky top-0 bg-white px-6 py-5 border-b border-gray-100 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-xl font-bold text-gray-900">Table QR Code</h2>
               <button
                 onClick={() => setShowQR(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors z-10"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
@@ -510,7 +600,7 @@ export default function TableManagement() {
                 {/* Restaurant Header */}
                 <div className="text-center mb-6">
                   <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">Scan to Order</h3>
-                  <p className="text-base text-slate-600 mt-1">Table {showQR.table.number}</p>
+                  <p className="text-base text-slate-600 mt-2">Table {showQR.table.number}</p>
                   {showQR.table.location && (
                     <p className="text-sm text-slate-500">{showQR.table.location}</p>
                   )}
@@ -549,7 +639,7 @@ export default function TableManagement() {
                 </div>
 
                 {/* Instructions */}
-                <div className="text-center space-y-1">
+                <div className="text-center space-y-2">
                   <p className="text-sm text-slate-600">
                     <span className="font-semibold">1.</span> Open your camera or QR scanner
                   </p>
@@ -579,7 +669,6 @@ export default function TableManagement() {
                               body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; background: #f1f5f9; }
                               .qr-card { text-align: center; max-width: 400px; }
                               .qr-card img { max-width: 256px; }
-                              .table-info { background: #f8fafc; padding: 20px; border-radius: 12px; margin-top: 20px; }
                             </style>
                           </head>
                           <body>${printContent.innerHTML}</body>
@@ -593,9 +682,9 @@ export default function TableManagement() {
                       }
                     }
                   }}
-                  className="btn btn-primary"
+                  className="px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition-all font-medium flex items-center justify-center gap-2"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h2z" />
                   </svg>
                   Print
@@ -607,9 +696,9 @@ export default function TableManagement() {
                     link.download = `table-${showQR.table.number}-qr.png`;
                     link.click();
                   }}
-                  className="btn btn-outline"
+                  className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium flex items-center justify-center gap-2"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l4 4m-4-4h8" />
                   </svg>
                   Download
