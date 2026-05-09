@@ -11,6 +11,7 @@ import InventoryManagement from './pages/InventoryManagement';
 import SalesDashboard from './pages/SalesDashboard';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import RawMaterialManagement from './pages/RawMaterialManagement';
 import DashboardLayout from './components/DashboardLayout';
 import { AuthProvider, ProtectedRoute } from './components/AuthProvider';
 
@@ -56,6 +57,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/kitchen" element={<KitchenDashboard />} />
                 <Route path="/admin/inventory" element={<InventoryManagement />} />
+                <Route path="/admin/raw-materials" element={<RawMaterialManagement />} />
                 <Route path="/admin/sales" element={<SalesDashboard />} />
                 <Route path="/admin/tables" element={<TableManagement />} />
                 <Route path="/admin/users" element={<UserManagement />} />

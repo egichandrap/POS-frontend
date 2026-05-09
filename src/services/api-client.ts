@@ -415,6 +415,147 @@ class ApiService {
     });
   }
 
+  // ============ RAW MATERIALS ============
+
+  async getRawMaterials(params?: {
+
+    limit?: number;
+    offset?: number;
+    search?: string;
+    supplier?: string;
+    low_stock?: boolean;
+    out_of_stock?: boolean;
+  }): Promise<Product[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set('limit', params.limit.toString());
+    if (params?.offset) queryParams.set('offset', params.offset.toString());
+    if (params?.search) queryParams.set('search', params.search);
+    if (params?.supplier) queryParams.set('supplier', params.supplier);
+    if (params?.low_stock !== undefined) queryParams.set('low_stock', String(params.low_stock));
+    if (params?.out_of_stock !== undefined) queryParams.set('out_of_stock', String(params.out_of_stock));
+
+    const q = queryParams.toString();
+    return this.request<Product[]>(`/raw-materials${q ? `?${q}` : ''}`);
+  }
+
+  async getRawMaterial(id: string): Promise<Product> {
+    return this.request<Product>(`/raw-materials/${id}`);
+  }
+
+  async createRawMaterial(request: {
+    sku: string;
+    name: string;
+    description?: string;
+    unit: string;
+    quantity: number;
+    min_stock: number;
+    cost_per_unit: number;
+    supplier?: string;
+    location?: string;
+  }): Promise<Product> {
+    return this.request<Product>('/raw-materials', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async updateRawMaterial(
+    id: string,
+    request: {
+      name?: string;
+      description?: string;
+      unit?: string;
+      min_stock?: number;
+      cost_per_unit?: number;
+      supplier?: string;
+      location?: string;
+    }
+  ): Promise<Product> {
+    return this.request<Product>(`/raw-materials/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async adjustRawMaterialStock(id: string, quantity: number, reason?: string): Promise<Product> {
+    return this.request<Product>(`/raw-materials/${id}/stock/adjust`, {
+      method: 'POST',
+      body: JSON.stringify({ quantity, reason }),
+    });
+  }
+
+  async deleteRawMaterial(id: string): Promise<void> {
+    return this.request<void>(`/raw-materials/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getLowStockMaterials(): Promise<Product[]> {
+    return this.request<Product[]>('/raw-materials/low-stock');
+  }
+
+  async getOutOfStockMaterials(): Promise<Product[]> {
+    return this.request<Product[]>('/raw-materials/out-of-stock');
+  }
+
+  // ============ PRODUCT RECIPES ============
+
+  async getProductRecipes(inventoryId: string): Promise<any[]> {
+    return this.request<any[]>(`/product-recipes/${inventoryId}`);
+  }
+
+  async addProductRecipe(request: {
+    inventory_id: string;
+    raw_material_id: string;
+    quantity_required: number;
+  }): Promise<any> {
+    return this.request<any>('/product-recipes', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async setProductRecipesBatch(inventoryId: string, recipes: { raw_material_id: string; quantity_required: number }[]): Promise<any> {
+    return this.request<any>(`/product-recipes/${inventoryId}/set`, {
+      method: 'POST',
+      body: JSON.stringify({ recipes }),
+    });
+  }
+
+  async updateProductRecipe(recipeId: string, quantity_required: number): Promise<any> {
+    return this.request<any>(`/product-recipes/${recipeId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ quantity_required }),
+    });
+  }
+
+  async deleteProductRecipe(recipeId: string): Promise<void> {
+    return this.request<void>(`/product-recipes/${recipeId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async deleteProductRecipesByInventory(inventoryId: string): Promise<void> {
+    return this.request<void>(`/product-recipes/${inventoryId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============ PRODUCT AVAILABILITY ============
+
+  async getProductAvailability(inventoryId: string): Promise<any> {
+    return this.request<any>(`/inventory/${inventoryId}/availability`);
+  }
+
+  async canProduce(inventoryId: string, quantity: number): Promise<any> {
+    // Postman contract: GET /api/inventory/:inventory_id/can-produce
+    // (quantity passed as query param or body depending on backend implementation)
+    return this.request<any>(`/inventory/${inventoryId}/can-produce?quantity=${encodeURIComponent(quantity.toString())}`, {
+      method: 'GET',
+    });
+  }
+
+
   // ============ REPORTS (Admin) ============
 
   async getTodaySales(): Promise<SalesSummary> {
@@ -423,3 +564,4 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
+

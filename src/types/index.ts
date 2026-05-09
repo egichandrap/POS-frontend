@@ -95,9 +95,14 @@ export interface Product {
   max_stock?: number;
   price: number;
   stock_status?: 'LOW' | 'NORMAL' | 'OUT' | 'OVERSTOCK';
+
+  // Raw material specific fields (backend may return for raw-materials too)
+  supplier?: string;
+  cost_per_unit?: number;
   created_at?: string;
   updated_at?: string;
 }
+
 
 export interface CreateProductRequest {
   sku: string;
